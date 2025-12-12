@@ -1,21 +1,24 @@
 import os
 import json
 from pathlib import Path
-from os_detect import os_detect
-from git_clone import clone_and_checkout
-from lanuage_detector import detect_language, detect_dependency_manager
-from cdxgen_sbom_generator import ensure_cdxgen, generate_sbom
-from retrieve_components import find_sbom_file, search_all_types, TYPES
-from linux_commands import run_cmd, count_total_files, language_wise_stats, detect_dependency_manager as detect_dep_manager
-from search_framework import search_frameworks
-from windows_search_framework import load_frameworks_from_output, DependencyManager
+from unix_supports.os_detect import os_detect
+from unix_supports.git_clone import clone_and_checkout
+from windows_flow.lanuage_detector import detect_language, detect_dependency_manager
+from unix_supports.cdxgen_sbom_generator import ensure_cdxgen, generate_sbom
+from unix_supports.retrieve_components import find_sbom_file, search_all_types, TYPES
+from linux_flow.linux_commands import run_cmd, count_total_files, language_wise_stats, detect_dependency_manager as detect_dep_manager
+from linux_flow.search_framework import search_frameworks
+from windows_flow.windows_search_framework import load_frameworks_from_output, DependencyManager
+from generate_dependency_tree.python.python_files_exsist import process_python
+from generate_dependency_tree.gradle.gradle_dependency import generate_gradle_dependency_tree
+from generate_dependency_tree.maven.maven_dependency_tree import generate_maven_dependency_tree
 
 def main():
     # step 0: which os
     os_type = os_detect()
     print(f"🖥 Detected OS: {os_type}")
 
-    # Step 0: Ask for GitHub repo
+    # Step 1: Ask for GitHub repo
     repo_with_branch = input(
         "Enter the GitHub repo URL with branch (e.g. https://github.com/user/repo.git@branch): "
     ).strip()
@@ -24,16 +27,17 @@ def main():
         print("❌ Repo URL required.")
         return
 
-    # Step 1: Clone repo
+    # Step 2: Clone repo
     repo_path = clone_and_checkout(repo_with_branch)
     print(f"\n➡ Repo cloned at: {repo_path}")
 
+    # from her to start window's_flow
     if os_type =="windows":
         # Step 1: Detect extensions as languages
         language_info = detect_language(repo_path)
         detected_language = language_info["detected_language"]
 
-        # Step 2: Print summary
+        # Print summary
         print("\n📂 File counts by language (extension-based):")
         for lang, count in language_info["language_counts"].items():
             print(f"   - {lang}: {count} files")
@@ -46,11 +50,11 @@ def main():
         print(f"📌 Languages found in project: {', '.join(language_info['languages_found'])}")
         print(f"📌 Detected language (most common extension): {detected_language}")
 
-        # Step 3: Detect dependency manager
+        # Detect dependency manager
         manager = detect_dependency_manager(repo_path, detected_language)
         print(f"📌 Detected dependency manager: {manager}")
 
-        # Step 4: Save everything to JSON (in repo root)
+        # Save everything to JSON (in repo root)
         output_data = {
             "repo_path": repo_path,
             "language_analysis": language_info,
@@ -65,7 +69,16 @@ def main():
 
         print(f"\n📁 JSON file saved at: {json_path}")
 
-        # Step 5: Generate SBOM only if it does NOT already exist
+        # Call your generated function for gradle
+        generate_gradle_dependency_tree(repo_path)
+
+        # Call your generated function for maven
+        generate_maven_dependency_tree(repo_path)
+        
+        # step 3 : generating dependency tree for python
+        process_python("python-env", repo_path, 1)
+
+        # Step 2: Generate SBOM only if it does NOT already exist
         sbom_file = Path(repo_path) / "sbom.json"
 
         if sbom_file.exists():
@@ -75,7 +88,7 @@ def main():
             print("\n📦 sbom.json not found — generating SBOM...")
             generate_sbom(repo_path=Path(repo_path))
 
-        # step 6 : retrieve components in the sbom.json file
+        # step 3 : retrieve components in the sbom.json file
         sbom_path = find_sbom_file("sbom.json", repo_path)
         if sbom_path:
             print(f"Found SBOM file at: {sbom_path}")
@@ -84,7 +97,7 @@ def main():
             output_file = os.path.join(current_dir, "output.txt")
             search_all_types(sbom_path, TYPES, output_file)
 
-            # Step 7: Load frameworks and search them in repo
+            # Step 4: Load frameworks and search them in repo
             frameworks = load_frameworks_from_output(output_file)
             if not frameworks:
                 print("No frameworks found in output.txt")
@@ -97,15 +110,25 @@ def main():
         else:
             print("sbom.json not found in current directory or subfolders.")
 
+    # Linux_flow
     else:
-        # step 7 : want the linux commands
+        # step 1 : get the repo details like what language,package manager,total files,language based files
         count_total_files(repo_path)
         language_wise_stats(repo_path)
         detect_dep_manager(repo_path)
 
         print("\n✅ Analysis Completed.")
 
-        # Step 5: Generate SBOM only if it does NOT already exist
+        # step 3 : generating dependency tree for python
+        process_python("python-env", repo_path, 1)
+
+        # Call your generated function for gradle
+        generate_gradle_dependency_tree(repo_path)
+
+        # Call your generated function for maven
+        generate_maven_dependency_tree(repo_path)
+
+        # Step 2: Generate SBOM only if it does NOT already exist
         sbom_file = Path(repo_path) / "sbom.json"
 
         if sbom_file.exists():
@@ -113,9 +136,9 @@ def main():
             print("⏩ Skipping SBOM generation.")
         else:
             print("\n📦 sbom.json not found — generating SBOM...")
-            generate_sbom(repo_path=Path(repo_path))
+            generate_sbom(repo_path=Path(repo_path)) 
     
-        # Step 6: Retrieve components in the sbom.json file
+        # Step 3: Retrieve components in the sbom.json file
         sbom_path = find_sbom_file("sbom.json", repo_path)
         if sbom_path:
             print(f"Found SBOM file at: {sbom_path}")
@@ -125,7 +148,7 @@ def main():
             output_txt = os.path.join(current_dir, "output.txt")  # output from search_all_types
             search_all_types(sbom_path, TYPES, output_txt)
 
-            # Step 7: Search the patterns from output.txt
+            # Step 4: Search the patterns from output.txt
             frame_txt = os.path.join(current_dir, "frame.txt")    # output for framework search results
             search_frameworks(repo_path=repo_path, frameworks_file=output_txt, output_file=frame_txt)
         else:
