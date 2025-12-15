@@ -70,18 +70,6 @@ def main():
 
         print(f"\n📁 JSON file saved at: {json_path}")
 
-        # call the generated function for go_lang
-        process_go(repo_path)
-
-        # Call your generated function for gradle
-        generate_gradle_dependency_tree(repo_path)
-
-        # Call your generated function for maven
-        generate_maven_dependency_tree(repo_path)
-        
-        # step 3 : generating dependency tree for python
-        process_python("python-env", repo_path, 1)
-
         # Step 2: Generate SBOM only if it does NOT already exist
         sbom_file = Path(repo_path) / "sbom.json"
 
@@ -113,6 +101,18 @@ def main():
                 print("Results saved to frame.txt")
         else:
             print("sbom.json not found in current directory or subfolders.")
+        
+        # call the generated function for go_lang
+        process_go(repo_path)
+
+        # Call your generated function for gradle
+        generate_gradle_dependency_tree(repo_path)
+
+        # Call your generated function for maven
+        generate_maven_dependency_tree(repo_path)
+        
+        # step 3 : generating dependency tree for python
+        process_python("python-env", repo_path, 1)
 
     # Linux_flow
     else:
