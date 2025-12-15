@@ -13,11 +13,25 @@ from generate_dependency_tree.python.python_files_exsist import process_python
 from generate_dependency_tree.gradle.gradle_dependency import generate_gradle_dependency_tree
 from generate_dependency_tree.maven.maven_dependency_tree import generate_maven_dependency_tree
 from generate_dependency_tree.go_lang.files_exstit import process_go
+from generate_dependency_tree.package_json.nodejs import generate_dependency_trees
 
 def main():
     # step 0: which os
     os_type = os_detect()
     print(f"🖥 Detected OS: {os_type}")
+
+    run_folder_name = input("Enter analysis folder name (e.g. spinnaker_analysis): ").strip()
+
+    if not run_folder_name:
+        print("❌ Folder name is required.")
+        return
+    
+    base_root = Path(__file__).parent.resolve()
+
+    orchestration_root = base_root / run_folder_name
+    orchestration_root.mkdir(parents=True, exist_ok=True)
+
+    print(f"📁 Analysis folder created at: {orchestration_root}")
 
     # Step 1: Ask for GitHub repo
     repo_with_branch = input(
@@ -29,7 +43,8 @@ def main():
         return
 
     # Step 2: Clone repo
-    repo_path = clone_and_checkout(repo_with_branch)
+    repo_path = clone_and_checkout(repo_with_branch,base_dir=orchestration_root)
+
     print(f"\n➡ Repo cloned at: {repo_path}")
 
     # from her to start window's_flow
@@ -84,10 +99,13 @@ def main():
         sbom_path = find_sbom_file("sbom.json", repo_path)
         if sbom_path:
             print(f"Found SBOM file at: {sbom_path}")
-            # ✅ Save output.txt INSIDE the repo folder
-            current_dir = os.path.dirname(os.path.abspath(__file__))
-            output_file = os.path.join(current_dir, "output.txt")
-            search_all_types(sbom_path, TYPES, output_file)
+
+            # ✅ Save outputs inside analysis folder
+            output_dir = orchestration_root
+            output_dir.mkdir(exist_ok=True)
+
+            output_file = output_dir / "output.txt"
+            search_all_types(sbom_path, TYPES, str(output_file))
 
             # Step 4: Load frameworks and search them in repo
             frameworks = load_frameworks_from_output(output_file)
@@ -96,23 +114,30 @@ def main():
             else:
                 print(f"\n🔍 Searching {len(frameworks)} frameworks in repo...")
                 searcher = DependencyManager(repo_path)
-                total_matches = searcher.search_all_frameworks(frameworks, output_file="frame.txt")
+                
+                frame_file = output_dir / "frame.txt"
+                total_matches = searcher.search_all_frameworks(frameworks,output_file=str(frame_file))
+
                 print(f"✅ Framework search completed. Total matches: {total_matches}")
                 print("Results saved to frame.txt")
         else:
             print("sbom.json not found in current directory or subfolders.")
         
         # call the generated function for go_lang
-        process_go(repo_path)
+        process_go(repo_path=repo_path,output_root=orchestration_root)
 
         # Call your generated function for gradle
-        generate_gradle_dependency_tree(repo_path)
+        generate_gradle_dependency_tree(repo_path=repo_path,output_root=orchestration_root)
 
         # Call your generated function for maven
-        generate_maven_dependency_tree(repo_path)
+        generate_maven_dependency_tree(repo_path=repo_path,output_root=orchestration_root)
         
         # step 3 : generating dependency tree for python
-        process_python("python-env", repo_path, 1)
+        process_python(env_name="python-env", repo_path=repo_path,output_root=orchestration_root,index= 1)
+
+        # this id package.json detection and generate the dependency tree
+        print("\n🚀 Running pnpm dependency analysis...")
+        generate_dependency_trees(repo_root=repo_path,output_root=orchestration_root)
 
     # Linux_flow
     else:
@@ -121,18 +146,6 @@ def main():
         language_wise_stats(repo_path)
         detect_dep_manager(repo_path)
         print("\n✅ Analysis Completed.")
-
-        # call the generated function for go_lang
-        process_go(repo_path)
-
-        # step 3 : generating dependency tree for python
-        process_python("python-env", repo_path, 1)
-
-        # Call your generated function for gradle
-        generate_gradle_dependency_tree(repo_path)
-
-        # Call your generated function for maven
-        generate_maven_dependency_tree(repo_path)
 
         # Step 2: Generate SBOM only if it does NOT already exist
         sbom_file = Path(repo_path) / "sbom.json"
@@ -149,16 +162,36 @@ def main():
         if sbom_path:
             print(f"Found SBOM file at: {sbom_path}")
 
-            # ✅ Save output.txt INSIDE the repo folder
-            current_dir = os.path.dirname(os.path.abspath(__file__))
-            output_txt = os.path.join(current_dir, "output.txt")  # output from search_all_types
-            search_all_types(sbom_path, TYPES, output_txt)
+            # ✅ Save outputs inside analysis folder
+            output_dir = orchestration_root
+            output_dir.mkdir(exist_ok=True)
+
+            output_file = output_dir / "output.txt"
+            search_all_types(sbom_path, TYPES, str(output_file))
 
             # Step 4: Search the patterns from output.txt
-            frame_txt = os.path.join(current_dir, "frame.txt")    # output for framework search results
-            search_frameworks(repo_path=repo_path, frameworks_file=output_txt, output_file=frame_txt)
+            # frame.txt path
+            frame_txt = output_dir / "frame.txt"
+            # Step 4: Search the patterns from output.txt
+            search_frameworks(repo_path=repo_path,frameworks_file=str(output_file),output_file=str(frame_txt))
         else:
             print("sbom.json not found in current directory or subfolders.")
+
+        # call the generated function for go_lang
+        process_go(repo_path=repo_path,output_root=orchestration_root)
+
+        # Call your generated function for gradle
+        generate_gradle_dependency_tree(repo_path=repo_path,output_root=orchestration_root)
+
+        # Call your generated function for maven
+        generate_maven_dependency_tree(repo_path=repo_path,output_root=orchestration_root)
+        
+        # step 3 : generating dependency tree for python
+        process_python(env_name="python-env", repo_path=repo_path,output_root=orchestration_root,index= 1)
+
+        # this id package.json detection and generate the dependency tree
+        print("\n🚀 Running pnpm dependency analysis...")
+        generate_dependency_trees(repo_root=repo_path,output_root=orchestration_root)
 
 if __name__ == "__main__":
     main()

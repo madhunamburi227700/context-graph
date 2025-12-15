@@ -4,8 +4,9 @@ from .venv_manager import setup, remove_venv
 from .deps import install_dependencies
 from .convert_deps import convert_json
 
-def process_python(env_name, repo_path, index):
+def process_python(env_name, repo_path, output_root, index):
     repo_path = Path(repo_path)
+    output_root = Path(output_root).resolve()
 
     # ---------------------------------------------
     # 1. Detect ALL Python dependency files
@@ -35,9 +36,9 @@ def process_python(env_name, repo_path, index):
         print(f"-----------------------------------------------\n")
 
         # Filenames for output
-        all_dep_file = f"python_all-dep_{index}_{file_count}.txt"
-        dets_file = f"python_dets_{index}_{file_count}.json"
-        normalized_file = f"python_normalized_{index}_{file_count}.json"
+        all_dep_file = output_root / f"python_all-dep_{index}_{file_count}.txt"
+        dets_file = output_root / f"python_dets_{index}_{file_count}.json"
+        normalized_file = output_root / f"python_normalized_{index}_{file_count}.json"
 
         # 3. Create venv
         venv_path = setup(env_name=f"{env_name}-{file_count}", project_path=repo_path)

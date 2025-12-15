@@ -1,46 +1,59 @@
 import subprocess
-import os
+from pathlib import Path
 
-def clone_and_checkout(repo_with_branch: str) -> str:
+
+def clone_and_checkout(repo_with_branch: str, base_dir: str | Path) -> str:
     """
-    Clone a git repo and switch to the given branch if it's not main/master.
-    
-    Args:
-        repo_with_branch (str): Git repo in one of the formats:
-            - <repo_url>
-            - <repo_url>@<branch>
-    
-    Returns:
-        str: Path to the cloned repository.
+    Clone a git repo into base_dir and checkout branch provided via @branch.
+
+    Examples:
+        https://github.com/user/repo.git
+        https://github.com/user/repo.git@develop
+        https://github.com/user/repo.git@release/1.0
     """
 
-    # Ensure exactly one argument is provided
-    if not isinstance(repo_with_branch, str) or not repo_with_branch.strip():
-        raise ValueError("❌ You must provide exactly one argument: '<repo_url>' or '<repo_url>@<branch>'")
+    if not repo_with_branch or not isinstance(repo_with_branch, str):
+        raise ValueError("❌ Repo URL is required")
 
-    # Parse repo and branch
+    base_dir = Path(base_dir).resolve()
+    base_dir.mkdir(parents=True, exist_ok=True)
+
+    # ✅ Parse repo URL and branch correctly
+    if "@@" in repo_with_branch:
+        raise ValueError("❌ Invalid repo format")
+
     if "@" in repo_with_branch:
-        repo_url, branch = repo_with_branch.split("@", 1)
+        repo_url, branch = repo_with_branch.rsplit("@", 1)
     else:
-        repo_url, branch = repo_with_branch, "main"  # default branch
+        repo_url, branch = repo_with_branch, None
 
-    repo_name = os.path.splitext(os.path.basename(repo_url))[0]
+    repo_name = Path(repo_url).stem
+    repo_path = base_dir / repo_name
 
     # Clone repo if not exists
-    if not os.path.exists(repo_name):
-        print(f"📥 Cloning repository {repo_url} ...")
-        subprocess.run(["git", "clone", repo_url], check=True)
+    if not repo_path.exists():
+        print(f"📥 Cloning {repo_url} into {repo_path}")
+        subprocess.run(
+            ["git", "clone", repo_url, str(repo_path)],
+            check=True
+        )
     else:
-        print(f"✔ Repository '{repo_name}' already exists. Skipping clone.")
+        print(f"✔ Repository '{repo_name}' already exists")
 
-    # Move into repo directory
-    os.chdir(repo_name)
-
-    # Checkout branch if not main/master
-    if branch.lower() not in ["main", "master"]:
-        print(f"🔄 Switching to branch: {branch}")
-        subprocess.run(["git", "checkout", branch], check=True)
+    # ✅ Checkout branch if provided
+    if branch:
+        print(f"🔄 Checking out branch: {branch}")
+        subprocess.run(
+            ["git", "fetch", "--all"],
+            cwd=repo_path,
+            check=True
+        )
+        subprocess.run(
+            ["git", "checkout", branch],
+            cwd=repo_path,
+            check=True
+        )
     else:
-        print(f"✔ Staying on default branch: {branch}")
+        print("✔ Using default branch")
 
-    return os.getcwd()
+    return str(repo_path)

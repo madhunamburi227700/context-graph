@@ -112,8 +112,9 @@ def save_dependencies_to_json(parsed_data, output_file):
 # ----------------------------
 # Main: scan repo and generate indexed outputs in repo root
 # ----------------------------
-def generate_maven_dependency_tree(repo_path):
+def generate_maven_dependency_tree(repo_path,output_root):
     repo_path = Path(repo_path).resolve()
+    output_root = Path(output_root).resolve()
     mvn = get_mvn_path()
 
     # Find all pom.xml files recursively
@@ -129,7 +130,7 @@ def generate_maven_dependency_tree(repo_path):
         print(f"\n📦 Processing module #{idx}: {module_dir}")
 
         # Run mvn dependency:tree
-        output_txt = repo_path / f"dependency_tree_{idx}.txt"
+        output_txt = output_root / f"dependency_tree_{idx}.txt"
         result = subprocess.run(
             [str(mvn), "dependency:tree", "-DoutputFile=" + str(output_txt), "-DoutputType=text"],
             cwd=module_dir,
@@ -145,7 +146,7 @@ def generate_maven_dependency_tree(repo_path):
 
         # Parse and save JSON
         parsed = parse_gradle_dependencies(output_txt)
-        output_json = repo_path / f"dependency_tree_{idx}.json"
+        output_json = output_root / f"dependency_tree_{idx}.json"
         save_dependencies_to_json(parsed, output_json)
 
 
