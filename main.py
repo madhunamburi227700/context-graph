@@ -12,6 +12,7 @@ from windows_flow.windows_search_framework import load_frameworks_from_output, D
 from generate_dependency_tree.python.python_files_exsist import process_python
 from generate_dependency_tree.gradle.gradle_dependency import generate_gradle_dependency_tree
 from generate_dependency_tree.maven.maven_dependency_tree import generate_maven_dependency_tree
+from generate_dependency_tree.go_lang.files_exstit import process_go
 
 def main():
     # step 0: which os
@@ -69,6 +70,9 @@ def main():
 
         print(f"\n📁 JSON file saved at: {json_path}")
 
+        # call the generated function for go_lang
+        process_go(repo_path)
+
         # Call your generated function for gradle
         generate_gradle_dependency_tree(repo_path)
 
@@ -116,8 +120,10 @@ def main():
         count_total_files(repo_path)
         language_wise_stats(repo_path)
         detect_dep_manager(repo_path)
-
         print("\n✅ Analysis Completed.")
+
+        # call the generated function for go_lang
+        process_go(repo_path)
 
         # step 3 : generating dependency tree for python
         process_python("python-env", repo_path, 1)
