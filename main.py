@@ -1,14 +1,14 @@
 import os
 import json
 from pathlib import Path
-from unix_supports.os_detect import os_detect
-from unix_supports.git_clone import clone_and_checkout
-from windows_flow.lanuage_detector import detect_language, detect_dependency_manager
-from unix_supports.cdxgen_sbom_generator import ensure_cdxgen, generate_sbom
-from unix_supports.retrieve_components import find_sbom_file, search_all_types, TYPES
+from both_supports.os_detect import os_detect
+from both_supports.git_clone import clone_and_checkout
+from python_flow.lanuage_detector import detect_language, detect_dependency_manager
+from both_supports.cdxgen_sbom_generator import ensure_cdxgen, generate_sbom
+from both_supports.retrieve_components import find_sbom_file, search_all_types, TYPES
 from linux_flow.linux_commands import run_cmd, count_total_files, language_wise_stats, detect_dependency_manager as detect_dep_manager
 from linux_flow.search_framework import search_frameworks
-from windows_flow.windows_search_framework import load_frameworks_from_output, DependencyManager
+from python_flow.windows_search_framework import load_frameworks_from_output, DependencyManager
 from generate_dependency_tree.python.python_files_exsist import process_python
 from generate_dependency_tree.gradle.gradle_dependency import generate_gradle_dependency_tree
 from generate_dependency_tree.maven.maven_dependency_tree import generate_maven_dependency_tree
