@@ -2,6 +2,7 @@ import subprocess
 import os
 
 
+
 def clone_and_checkout(repo_with_branch: str) -> str:
     """
     Clone a git repo and switch to the given branch if it's not main/master.
