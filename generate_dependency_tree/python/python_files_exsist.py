@@ -1,64 +1,93 @@
 import os
+import json
 from pathlib import Path
 from .venv_manager import setup, remove_venv
 from .deps import install_dependencies
 from .convert_deps import convert_json
 
+
 def process_python(env_name, repo_path, output_root, index):
-    repo_path = Path(repo_path)
+    repo_path = Path(repo_path).resolve()
     output_root = Path(output_root).resolve()
 
-    # ---------------------------------------------
-    # 1. Detect ALL Python dependency files
-    # ---------------------------------------------
-    valid_files = [
-        "pyproject.toml",
-        "requirements.txt"
-    ]
+    print("\n🔍 Checking for Python dependency files...")
 
-    found_files = [f for f in valid_files if (repo_path / f).exists()]
+    valid_files = {"pyproject.toml", "requirements.txt"}
+
+    found_files = sorted(
+        [
+            p.relative_to(repo_path)
+            for p in repo_path.rglob("*")
+            if p.name in valid_files
+        ],
+        key=str
+    )
 
     if not found_files:
-        print("⚠️ No Python dependency files found. Skipping Python processing.")
-        return
+        print("⏭️ No Python dependency files found — skipping Python analysis.")
+        return False
 
-    print(f"\n===============================================")
-    print(f"▶ Found Python dependency files: {found_files}")
-    print(f"===============================================\n")
+    print("✅ Found Python dependency files:")
+    for f in found_files:
+        print(f"   - {f}")
 
-    # ---------------------------------------------
-    # 2. Process each file separately
-    # ---------------------------------------------
+    combined_output = {
+        "python_dependencies": []
+    }
+
     file_count = 1
-    for selected_file in found_files:
-        print(f"\n-----------------------------------------------")
-        print(f"📦 Processing dependency file: {selected_file}")
-        print(f"-----------------------------------------------\n")
 
-        # Filenames for output
+    for selected_file in found_files:
+        print(f"\n📦 Processing Python dependency file: {selected_file}")
+
+        project_dir = (repo_path / selected_file).parent
+
         all_dep_file = output_root / f"python_all-dep_{index}_{file_count}.txt"
         dets_file = output_root / f"python_dets_{index}_{file_count}.json"
-        normalized_file = output_root / f"python_normalized_{index}_{file_count}.json"
+        temp_normalized = output_root / f"_tmp_python_norm_{file_count}.json"
 
-        # 3. Create venv
-        venv_path = setup(env_name=f"{env_name}-{file_count}", project_path=repo_path)
+        try:
+            venv_name = f"{env_name}-{file_count}"
+            venv_path = setup(env_name=venv_name, project_path=project_dir)
 
-        # 4. Install deps + generate tree
-        install_dependencies(
-            f"{env_name}-{file_count}",
-            repo_path,
-            selected_file,
-            all_dep_file,
-            dets_file
-        )
+            install_dependencies(
+                venv_name,
+                project_dir,
+                selected_file.name,
+                all_dep_file,
+                dets_file
+            )
 
-        # 5. Normalize JSON
-        if os.path.exists(dets_file):
-            convert_json(dets_file, normalized_file)
+            if dets_file.exists():
+                convert_json(dets_file, temp_normalized)
 
-        # 6. Remove venv
-        remove_venv(venv_path)
+                with open(temp_normalized, "r", encoding="utf-8") as f:
+                    normalized_data = json.load(f)
+
+                combined_output["python_dependencies"].append({
+                    "source_file": str(selected_file),
+                    "project_path": str(project_dir.relative_to(repo_path)),
+                    "data": normalized_data
+                })
+
+                temp_normalized.unlink(missing_ok=True)
+            else:
+                print(f"⚠️ No dependency JSON for {selected_file}")
+
+        except Exception as e:
+            print(f"❌ Failed processing {selected_file}: {e}")
+
+        finally:
+            if 'venv_path' in locals():
+                remove_venv(venv_path)
 
         file_count += 1
 
-    print("\n🎉 Finished processing ALL Python dependency files")
+    final_output_file = output_root / "python_dependencies_combined.json"
+    with open(final_output_file, "w", encoding="utf-8") as f:
+        json.dump(combined_output, f, indent=2)
+
+    print(f"\n📄 Combined Python dependencies saved → {final_output_file}")
+    print("🎉 Finished processing Python dependency files.")
+
+    return True

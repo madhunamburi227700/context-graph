@@ -40,7 +40,7 @@ def install_dependencies(env_name, repo_path, dep_file, all_dep_output, dets_out
     pipgrip_cmd = [pipgrip_exec] if os.path.exists(pipgrip_exec) else [python_exec, "-m", "pipgrip.cli"]
 
     # 2. Build full dependency file
-    dep_path = os.path.join(repo_path, dep_file)
+    dep_path = os.path.join(repo_path, str(dep_file))
 
     if dep_file.endswith("pyproject.toml"):
         print(f"\n📄 Processing pyproject.toml: {dep_file}")

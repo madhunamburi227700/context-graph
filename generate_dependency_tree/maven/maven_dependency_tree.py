@@ -112,41 +112,60 @@ def save_dependencies_to_json(parsed_data, output_file):
 # ----------------------------
 # Main: scan repo and generate indexed outputs in repo root
 # ----------------------------
-def generate_maven_dependency_tree(repo_path,output_root):
+def generate_maven_dependency_tree(repo_path, output_root):
     repo_path = Path(repo_path).resolve()
     output_root = Path(output_root).resolve()
-    mvn = get_mvn_path()
 
-    # Find all pom.xml files recursively
+    print("\n🔍 Checking for Maven projects...")
+
+    # ✅ STEP 1: Detect pom.xml FIRST
     pom_files = list(repo_path.rglob("pom.xml"))
     if not pom_files:
-        print(f"❌ No pom.xml files found in {repo_path}")
-        return
+        print("⏭️ No pom.xml found — skipping Maven dependency tree.")
+        return False
 
-    print(f"🔍 Found {len(pom_files)} pom.xml files. Generating dependency trees in repo root...")
+    # ✅ STEP 2: Resolve Maven ONLY if needed
+    try:
+        mvn = get_mvn_path()
+    except Exception as e:
+        print(str(e))
+        print("⏭️ Skipping Maven dependency tree.")
+        return False
 
+    print(f"🔍 Found {len(pom_files)} pom.xml file(s).")
+
+    # ✅ STEP 3: Process each Maven module
     for idx, pom in enumerate(pom_files, start=1):
         module_dir = pom.parent
-        print(f"\n📦 Processing module #{idx}: {module_dir}")
+        print(f"\n📦 Processing Maven module #{idx}: {module_dir}")
 
-        # Run mvn dependency:tree
         output_txt = output_root / f"dependency_tree_{idx}.txt"
+
         result = subprocess.run(
-            [str(mvn), "dependency:tree", "-DoutputFile=" + str(output_txt), "-DoutputType=text"],
+            [
+                str(mvn),
+                "dependency:tree",
+                f"-DoutputFile={output_txt}",
+                "-DoutputType=text"
+            ],
             cwd=module_dir,
             capture_output=True,
             text=True
         )
 
         if result.returncode != 0:
-            print(f"❌ Maven failed for {module_dir}: {result.stderr}")
+            print(f"❌ Maven failed for {module_dir}")
+            print(result.stderr)
             continue
 
-        print(f"✅ Maven dependency tree saved to {output_txt}")
+        print(f"✅ Maven dependency tree saved → {output_txt}")
 
-        # Parse and save JSON
-        parsed = parse_gradle_dependencies(output_txt)
-        output_json = output_root / f"dependency_tree_{idx}.json"
-        save_dependencies_to_json(parsed, output_json)
+        # ✅ Parse and save JSON only if TXT exists
+        try:
+            parsed = parse_gradle_dependencies(output_txt)
+            output_json = output_root / f"maven_dependency_tree_{idx}.json"
+            save_dependencies_to_json(parsed, output_json)
+        except Exception as e:
+            print(f"❌ Failed to parse Maven output for {module_dir}: {e}")
 
-
+    return True

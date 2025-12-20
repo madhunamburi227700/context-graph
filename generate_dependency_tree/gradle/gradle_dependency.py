@@ -14,6 +14,21 @@ ALL_DEP_TREE = "1.txt"
 BATCH_SIZE = 50  # number of modules per Gradle run
 
 
+def detect_gradle(repo_path: Path) -> bool:
+    repo_path = Path(repo_path)
+
+    # Any Gradle build file
+    if any(repo_path.rglob("build.gradle")):
+        return True
+    if any(repo_path.rglob("build.gradle.kts")):
+        return True
+    if any(repo_path.rglob("settings.gradle")):
+        return True
+    if any(repo_path.rglob("settings.gradle.kts")):
+        return True
+
+    return False
+
 def parse_settings_gradle(path: Path):
     """Parse includeBuild and include statements from settings.gradle"""
     include_builds = []
@@ -120,16 +135,27 @@ def run_gradle_command(modules, batch_num, repo_path: Path, output_root: Path):
 
     print(f"✅ Batch {batch_num} complete.")
 
-def generate_gradle_dependency_tree(repo_path,output_root):
-    """Scan Gradle modules and generate dependency tree inside repo"""
-
-    repo_path = Path(repo_path).resolve()   # Ensure Path
+def generate_gradle_dependency_tree(repo_path, output_root):
+    repo_path = Path(repo_path).resolve()
     output_root = Path(output_root).resolve()
 
-    print("🔍 Scanning recursively for Gradle modules...")
+    print("\n🔍 Checking for Gradle build files...")
 
+    # ✅ STEP 1: Detect Gradle
+    if not detect_gradle(repo_path):
+        print("⏭️ No Gradle project found — skipping Gradle dependency tree.")
+        return False
+
+    print("✅ Gradle project detected. Scanning modules...")
+
+    # ✅ STEP 2: Find modules
     modules = find_all_modules(repo_path)
     modules = sorted(set(modules))
+
+    # ❗ Extra safety
+    if not modules:
+        print("⏭️ No Gradle modules resolved — skipping.")
+        return False
 
     print(f"✅ Found {len(modules)} modules:")
     for m in modules:
@@ -155,10 +181,11 @@ def generate_gradle_dependency_tree(repo_path,output_root):
 
     # --- Run Gradle in batches ---
     for i in range(0, len(modules), BATCH_SIZE):
-        batch = modules[i : i + BATCH_SIZE]
+        batch = modules[i: i + BATCH_SIZE]
         batch_num = (i // BATCH_SIZE) + 1
         run_gradle_command(batch, batch_num, repo_path, output_root)
 
     print("\n✅ All batches complete.")
     print(f"📄 Full dependency tree saved at: {dep_file}")
 
+    return True

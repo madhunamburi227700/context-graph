@@ -2,6 +2,19 @@ import os
 import subprocess
 import shutil
 import platform
+import sys
+
+
+def find_python_executable():
+    """
+    Find a valid Python executable across Linux / Windows / Mac.
+    """
+    for cmd in ("python3", "python"):
+        if shutil.which(cmd):
+            return cmd
+
+    # Ultimate fallback (current interpreter)
+    return sys.executable
 
 
 def setup(env_name="sbom-env", project_path=None):
@@ -13,8 +26,10 @@ def setup(env_name="sbom-env", project_path=None):
 
     venv_path = os.path.join(project_path, env_name)
 
+    python_cmd = find_python_executable()
+
     print("\n=== Step 1: Check Python version ===")
-    subprocess.run(["python", "--version"], check=True)
+    subprocess.run([python_cmd, "--version"], check=True)
 
     # Create venv using uv
     if not os.path.exists(venv_path):
