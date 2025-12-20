@@ -18,98 +18,161 @@ Overall, the Context Graph provides an end-to-end automated analysis pipeline th
 
 ---
 
-## Workflow Steps
+## Workflow
 
-### Step 1: Repository Scanning
+### 1. Repository Cloning
 
-The system begins by scanning the entire codebase to understand the repository structure. During this phase, it identifies relevant source files and configuration artifacts required for language, package manager, and dependency detection.
+* The system starts by cloning the repository specified by the user.
+* The repository is stored in a user-defined folder for analysis.
 
-### Step 2: Programming Language Detection and Package Manager Detection
+**Output Example:**
 
-* The code analyzes file extensions and well-known project configuration files to detect which programming languages are used in the repository.
-* The detected languages are recorded as structured output for use in later stages.
-* After identifying the package manager, the system also detects the corresponding configuration file (for example, `package.json`, `pom.xml`, `requirements.txt`, `go.mod`, etc.).
-
-### Step 3: SBOM Generation
-
-After identifying the package managers, the system generates a Software Bill of Materials (SBOM) for the entire repository using the **cdxgen** tool.
-
-* The SBOM provides a complete and standardized inventory of all dependencies.
-* Both direct and transitive dependencies are captured.
-
-### Step 4: Framework Extraction from SBOM
-
-* The generated SBOM is parsed to identify frameworks and major libraries used in the codebase.
-* The extracted framework information is consolidated and written to an output file.
-* This output file serves as an input for subsequent analysis steps.
-
-### Step 5: Framework Usage Code Search
-
-* The code-search component takes the framework output file as input.
-* It scans the repository to locate where each framework is used in the source code.
-* For every match, the system captures the file path and line number.
-
-### Step 6: Dependency Tree Re-verification
-
-* As a validation step, the system re-detects the package managers in the repository.
-* Dependency trees are generated for each detected package manager.
-* This step ensures that dependency information is accurate and consistent with the SBOM data.
-* It also allows verification of whether transitive dependencies appear correctly in the dependency trees.
-
-### Step 7: Output Generation
-
-Finally, all results are collected and written to structured output files, including:
-
-* Detected programming languages
-* Detected package managers
-* Generated SBOM
-* Framework list
-* Framework usage locations
-* Dependency trees
-
-These outputs together provide a complete and traceable view of the repository.
+```
+➡ Repo cloned at: /path/to/repo
+```
 
 ---
 
-## Architecture Diagram
+### 2. OS Detection
 
-*(Add the architecture diagram here showing repository input, language and package manager detection, SBOM generation, framework extraction, code search, and dependency tree generation.)*
+* The analysis adapts based on the operating system (Windows or Linux).
+* OS detection ensures that commands and scripts run correctly in each environment.
+
+**Output Example:**
+
+```
+🖥 Detected OS: linux
+```
 
 ---
 
-## Output Formats
+### 3. Language and Package Manager Detection
 
-### Repository Cloning and Initial Analysis
+* The system detects **programming languages** by analyzing file extensions.
+* It also identifies **package managers** (e.g., npm, Maven, Gradle, pip, Go modules).
+* Special configuration files (e.g., `package.json`, `pom.xml`, `requirements.txt`, `go.mod`) are detected to aid dependency analysis.
 
-* The process begins by cloning the target repository.
-* The system detects the programming languages used and identifies the main package manager.
-* This analysis is performed using a Python script on Windows or other operating systems, or using equivalent Linux commands on Linux machines.
-* The results are saved in a file named `repo_analysis.json`.
+**Output Example:**
 
-### SBOM Generation and Retrieval
+```
+📂 File counts by language:
+   - Python: 45 files
+   - JavaScript: 20 files
+📌 Detected language (most common): Python
+📌 Dependency manager: pip
+```
 
-* The tool searches for an existing `sbom.json` file in the repository.
-* If it is not available, **cdxgen** is used to generate the SBOM automatically.
-* The SBOM contains detailed information about frameworks, libraries, and applications used in the source code.
+---
 
-### Frameworks and Libraries Extraction
+### 4. SBOM Generation
 
-* A Python script parses `sbom.json` to extract all frameworks, libraries, and applications used in the repository.
-* The extracted data is saved in a file named `output.txt`.
+* A **Software Bill of Materials (SBOM)** is generated using `cdxgen` if it doesn’t already exist.
+* The SBOM captures **all dependencies**, including direct and transitive dependencies.
 
-### Code Search Tool
+**Output Example:**
 
-* The extracted frameworks from `output.txt` are searched in the source code using the Code Search Tool.
-* For each occurrence, the file path and line number are recorded in `frame.txt`.
+```
+📦 sbom.json not found — generating SBOM...
+🔎 SBOM generated at: /repo/sbom.json
+```
 
-### Dependency Tree Generation
+---
 
-* To verify and understand dependencies, dependency trees are generated for supported package managers, such as:
+### 5. Framework Extraction
 
-  * Python
-  * Java (Maven / Gradle)
-  * Golang
-* If a repository uses multiple package managers, separate dependency trees are generated for each.
-* If multiple configuration files exist for the same package manager, output files are indexed for easy reference.
+* Frameworks and major libraries are extracted from the SBOM.
+* The output is saved to `output.txt` for further analysis.
 
-This approach allows efficient identification of both direct and transitive dependencies and ensures consistency between SBOM data and dependency trees.
+**Output Example:**
+
+```
+--- output.txt ---
+Flask
+Django
+React
+```
+
+---
+
+### 6. Framework Usage Search
+
+* Using `frame.txt`, the system identifies **where each framework is used** in the repository.
+* Records include **file paths and line numbers** for precise traceability.
+
+**Output Example:**
+
+```
+--- frame.txt ---
+app/main.py:12: import Flask
+frontend/src/App.js:5: import React
+```
+
+---
+
+### 7. Dependency Tree Generation
+
+* Dependency trees are generated for all detected package managers:
+
+  * **Python** → pip/requirements
+  * **Node.js** → npm/pnpm
+  * **Java** → Maven/Gradle
+  * **Go** → Go modules
+
+* Each tree is saved as a JSON file for structured reference.
+
+**Output Example:**
+
+```
+--- python_dependencies_combined.json ---
+{
+    "Flask": "2.2.2",
+    "requests": "2.31.0"
+}
+--- node_dependency_tree_1.json ---
+{
+    "react": "18.2.0",
+    "axios": "1.5.0"
+}
+```
+
+---
+
+### 8. Report Generation
+
+* All outputs are **consolidated in `report.txt`**.
+* This includes:
+
+  * OS detection
+  * Language & package manager info
+  * SBOM details
+  * Framework extraction results
+  * Framework usage locations
+  * Dependency trees
+
+**Purpose:** A single file to quickly inspect repository analysis.
+
+---
+
+## Directory Structure
+
+```
+<analysis-folder>/
+├─ report.txt                # Full analysis output
+├─ output.txt                # Extracted frameworks
+├─ frame.txt                 # Framework usage locations
+├─ repo_path/sbom.json       # Generated SBOM
+├─ python_dependencies_combined.json
+├─ node_dependency_tree_1.json
+├─ maven_dependency_tree_1.json
+└─ go_deps_1.json
+```
+
+---
+
+## Notes
+
+* Supports both **Windows and Linux** workflows.
+* Handles multiple languages and multiple package managers per repository.
+* Provides a **traceable link** from SBOM → frameworks → usage locations → re-verficaion /dependency tree.
+
+---
