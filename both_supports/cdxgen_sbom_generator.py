@@ -4,62 +4,48 @@ import shutil
 import os
 import platform
 
+
 # -------------------- Ensure cdxgen is installed --------------------
 def ensure_cdxgen():
     """Ensure cdxgen is installed and available in PATH."""
-    # Check for cdxgen executable
-    cdxgen_path = shutil.which("cdxgen") or shutil.which("cdxgen.cmd")
-    if cdxgen_path:
+    if shutil.which("cdxgen") or shutil.which("cdxgen.cmd"):
         return
 
     print("❌ cdxgen not found. Installing globally via npm...")
     subprocess.run(["npm", "install", "-g", "@cyclonedx/cdxgen"], check=True)
 
-    # Add npm global bin directory to PATH
     npm_bin = subprocess.check_output(["npm", "bin", "-g"], text=True).strip()
     path_sep = ";" if platform.system() == "Windows" else ":"
 
-    if npm_bin not in os.environ["PATH"]:
-        os.environ["PATH"] = f"{npm_bin}{path_sep}{os.environ['PATH']}"
+    if npm_bin not in os.environ.get("PATH", ""):
+        os.environ["PATH"] = f"{npm_bin}{path_sep}{os.environ.get('PATH', '')}"
 
-    # Verify installation again
-    cdxgen_path = shutil.which("cdxgen") or shutil.which("cdxgen.cmd")
-    if not cdxgen_path:
+    if not (shutil.which("cdxgen") or shutil.which("cdxgen.cmd")):
         raise EnvironmentError(
             "❌ Could not find cdxgen after installation. "
-            "Try restarting the terminal or add npm global bin to PATH."
+            "Restart terminal or add npm global bin to PATH."
         )
 
+
 # -------------------- Generate SBOM --------------------
-def generate_sbom(repo_path: Path):
+def generate_sbom(repo_path: Path) -> Path:
     """
-    Generate SBOM using cdxgen inside the cloned repo.
-    Saves output as repo_path/sbom.json.
-    Works on both Windows and Linux.
+    Generate SBOM using cdxgen.
+    Returns path to sbom.json.
     """
     ensure_cdxgen()
 
     sbom_file = repo_path / "sbom.json"
 
-    print(f"📦 Generating SBOM using cdxgen in: {repo_path}")
-    print(f"📄 SBOM Output File: {sbom_file}")
+    print(f"\n📦 Generating SBOM in: {repo_path}")
 
-    # Base command
     cmd = ["cdxgen", "-r", "--json-pretty", "-o", str(sbom_file)]
-
-    # On Linux: shell=False (required)
-    # On Windows: shell=True is OPTIONAL but safe
-    use_shell = (platform.system() == "Windows")
+    use_shell = platform.system() == "Windows"
 
     try:
-        subprocess.run(
-            cmd,
-            cwd=str(repo_path),
-            check=True,
-            shell=use_shell
-        )
+        subprocess.run(cmd, cwd=str(repo_path), check=True, shell=use_shell)
     except FileNotFoundError:
-        print("⚠️ cdxgen command not found, trying with npx...")
+        print("⚠️ cdxgen not found, trying npx...")
         subprocess.run(
             ["npx", "cdxgen", "-r", "--json-pretty", "-o", str(sbom_file)],
             cwd=str(repo_path),
@@ -67,3 +53,26 @@ def generate_sbom(repo_path: Path):
         )
 
     print(f"✅ SBOM generated at: {sbom_file}")
+    return sbom_file
+
+
+# -------------------- SIMPLE ORCHESTRATION --------------------
+def run_sbom_flow(repo_path) -> Path:
+    """
+    One-flow orchestration:
+    - If sbom.json exists → skip
+    - Else → generate SBOM
+    """
+    # Ensure repo_path is a Path object
+    repo_path = Path(repo_path)
+
+    sbom_file = repo_path / "sbom.json"
+
+    if sbom_file.exists():
+        print(f"\n🔎 sbom.json already exists at: {sbom_file}")
+        print("⏩ Skipping SBOM generation.")
+        return sbom_file
+
+    print("\n📦 sbom.json not found — generating SBOM...")
+    return generate_sbom(repo_path)
+

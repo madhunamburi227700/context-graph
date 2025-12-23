@@ -1,120 +1,99 @@
 import subprocess
 from pathlib import Path
 
+# -----------------------------
+# Utility to write to report
+# -----------------------------
+def write_output(text, report_file):
+    print(text)
+    with open(report_file, "a", encoding="utf-8") as f:
+        f.write(text + "\n")
 
-# ---------------------- Load Only Frameworks ---------------------- #
+# -----------------------------
+# Load frameworks from output.txt
+# -----------------------------
 def load_frameworks_only(frameworks_file: str):
     frameworks = []
     inside_framework_section = False
-
     with open(frameworks_file, "r") as f:
         for line in f:
             line = line.strip()
-
             if line == "=== FRAMEWORK ===":
                 inside_framework_section = True
                 continue
-
             if line == "=== LIBRARY ===":
                 break
-
             if inside_framework_section and line:
                 frameworks.append(line)
-
     return frameworks
 
-
-# ---------------------- Main Search Function ---------------------- #
-def search_frameworks(repo_path: str, frameworks_file: str, output_file: str = "frame.txt"):
-    print("\n======= 🔍 DEBUG: Starting search_frameworks() =======")
-
+# -----------------------------
+# Search frameworks in repo
+# -----------------------------
+def search_frameworks(repo_path: str, frameworks_file: str, output_file: str):
     repo = Path(repo_path)
     fw_file = Path(frameworks_file)
     output_path = Path(output_file)
-
-    if not repo.exists():
-        print(f"❌ ERROR: Repository folder not found: {repo}")
-        return
-
-    if not fw_file.exists():
-        print(f"❌ ERROR: Framework list file not found: {fw_file}")
-        return
+    results = {}
+    used_prefixes = set()
 
     frameworks = load_frameworks_only(frameworks_file)
-
-    print(f"✅ Loaded {len(frameworks)} frameworks from {fw_file}")
-
-    if not frameworks:
-        print("❌ ERROR: No frameworks under === FRAMEWORK === section.")
-        return
-
-    results = {}
-    used_prefixes = set()   # <-- ensures no duplicate prefix searches
+    write_output(f"🔍 Loaded {len(frameworks)} frameworks from {fw_file}", output_file)
 
     for idx, fw in enumerate(frameworks, 1):
-        print(f"\n---- 🔎 Searching for framework {idx}/{len(frameworks)}: '{fw}' ----")
-
+        write_output(f"\n---- Searching {idx}/{len(frameworks)}: '{fw}' ----", output_file)
         try:
-            # ---------- 1) Search FULL name first ----------
+            # Full name search
             full_pattern = f"(import .*{fw}.*|require\\(['\"]{fw}['\"]\\))"
-            print(f"   ➤ Full search pattern: {full_pattern}")
-
             output = subprocess.run(
                 ["grep", "-RinE", full_pattern, str(repo)],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE, text=True
             )
-
             full_matches = output.stdout.strip()
-
             if full_matches:
-                print(f"   ✅ Full match found for '{fw}'")
                 results[fw] = full_matches
-                continue  # do NOT check prefix
-            else:
-                print(f"   ❌ No full match for '{fw}'")
+                continue
 
-            # ---------- 2) Search prefix ONLY IF full match empty ----------
+            # Prefix search if no full match
             if "-" in fw:
                 prefix = fw.split("-")[0]
-
                 if prefix in used_prefixes:
-                    print(f"   ⚠ Prefix '{prefix}' already searched. Skipping.")
                     continue
-
                 used_prefixes.add(prefix)
-
                 prefix_pattern = f"(import .*(^|/){prefix}.*|require\\(['\"]{prefix}['\"]\\))"
-                print(f"   ➤ Prefix search pattern: {prefix_pattern}")
-
                 output = subprocess.run(
                     ["grep", "-RinE", prefix_pattern, str(repo)],
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE, text=True
                 )
-
                 prefix_matches = output.stdout.strip()
-
                 if prefix_matches:
-                    print(f"   ✅ Prefix match found for '{prefix}'")
                     results[prefix] = prefix_matches
-                else:
-                    print(f"   ❌ No prefix match for '{prefix}'")
-
         except Exception as e:
-            print(f"❌ ERROR searching for {fw}: {e}")
+            write_output(f"❌ ERROR searching for {fw}: {e}", output_file)
 
-    # ---------------- Write Results ---------------- #
-    print("\n======= 📝 Writing results to frame.txt =======")
-
+    # Write results to frame.txt
     with open(output_path, "w") as f:
         if not results:
             f.write("❌ No frameworks found.\n")
-            print("⚠ No results.")
         else:
             for fw, lines in results.items():
                 f.write(f"\n=== {fw} ===\n{lines}\n")
 
-    print(f"✅ Search completed! Results saved in {output_file}")
-    print("======= 🔍 DEBUG: search_frameworks() finished =======\n")
-    
+    write_output(f"✅ Search completed! Results saved in {output_file}", output_file)
+
+# -----------------------------
+# Single Orchestrator Call
+# -----------------------------
+def orchestrate_linux_framework_search(repo_path, output_file, report_file):
+    write_output("\n-----Section 4: Framework Search (frame.txt)-----", report_file)
+    search_frameworks(repo_path=repo_path, frameworks_file=output_file, output_file=str(Path(output_file).parent / "frame.txt"))
+
+    frame_txt = Path(output_file).parent / "frame.txt"
+    write_output("\n--- Contents of frame.txt ---", report_file)
+    with open(frame_txt, "r", encoding="utf-8") as f:
+        for line in f:
+            write_output(line.strip(), report_file)
+    write_output("\n---------------------------------------------------", report_file)
+
