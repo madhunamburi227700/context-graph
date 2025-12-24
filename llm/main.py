@@ -161,6 +161,7 @@ class ChatSession:
                 "- If the user asks for analysis, SBOM generator, or framework information, use 'analyze_repo'.\n"
                 "- Some tools have both Linux and Python-based implementations. "
                 "- search_frameworks is a tool that searches for frameworks in a repo and generates a reportand otput file as mention like function.\n"
+                "- generate_dependency_tree is a tool that generates a dependency tree for a repo and writes the report to a file.\n"
                 "Use the if-else logic in the MCP tool handler to decide which implementation to run based on OS detection.\n\n"
                 "When a tool is required, respond ONLY with JSON in the following format "
                 "and do NOT ask any questions:\n"
@@ -191,7 +192,7 @@ class ChatSession:
             arguments = parsed.get("arguments", {})
 
             # -------- GLOBAL PATH INJECTION (SINGLE REPORT FILE) --------
-            if tool_name in {"analyze_repo", "extract_sbom_components", "search_frameworks"}:
+            if tool_name in {"analyze_repo", "extract_sbom_components", "search_frameworks","generate_dependency_tree"}:
 
                 if not self.repo_context:
                     print("❌ No repo available. Clone first.")

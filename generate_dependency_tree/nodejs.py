@@ -6,8 +6,8 @@ from pathlib import Path
 
 
 class NodeDependencyHandler:
-    def __init__(self, repo_root: Path, output_root: Path, report_file: Path):
-        self.repo_root = Path(repo_root).resolve()
+    def __init__(self, repo_path: Path, output_root: Path, report_file: Path):
+        self.repo_path = Path(repo_path).resolve()
         self.output_root = Path(output_root).resolve()
         self.report_file = Path(report_file)
         self.output_root.mkdir(parents=True, exist_ok=True)
@@ -19,7 +19,7 @@ class NodeDependencyHandler:
 
     # ---------------- Command helpers ----------------
     def _run_cmd(self, cmd: str, cwd: Path, output_file: Path | None = None) -> bool:
-        print(f"▶ Running: {cmd} (in {cwd})")
+        # print(f"▶ Running: {cmd} (in {cwd})")
 
         result = subprocess.run(
             cmd,
@@ -31,8 +31,8 @@ class NodeDependencyHandler:
         )
 
         if result.returncode != 0:
-            print(f"❌ Command failed: {cmd}")
-            print(result.stderr)
+            # print(f"❌ Command failed: {cmd}")
+            # print(result.stderr)
             return False
 
         if output_file:
@@ -43,7 +43,7 @@ class NodeDependencyHandler:
     def _find_package_json_dirs(self):
         package_dirs = []
 
-        for root, dirs, files in os.walk(self.repo_root):
+        for root, dirs, files in os.walk(self.repo_path):
             if "node_modules" in dirs:
                 dirs.remove("node_modules")
 
@@ -89,7 +89,7 @@ class NodeDependencyHandler:
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump(tree, f, indent=2)
 
-        print(f"📄 Dependency tree JSON saved → {output_file}")
+        # print(f"📄 Dependency tree JSON saved → {output_file}")
 
     # ---------------- Public entry ----------------
     def run(self) -> bool:
@@ -100,7 +100,7 @@ class NodeDependencyHandler:
         # Section header
         self._write_report("\n-----Section 5.5: Node.js Projects-----")
 
-        print("\n🔍 Checking for Node.js projects...")
+        # print("\n🔍 Checking for Node.js projects...")
         package_dirs = self._find_package_json_dirs()
 
         if not package_dirs:
@@ -109,12 +109,12 @@ class NodeDependencyHandler:
             )
             return False
 
-        print(f"✅ Found {len(package_dirs)} Node.js project(s).")
+        # print(f"✅ Found {len(package_dirs)} Node.js project(s).")
 
         output_index = 1
 
         for pkg_dir in package_dirs:
-            print(f"\n📦 Processing Node project: {pkg_dir.relative_to(self.repo_root)}")
+            # print(f"\n📦 Processing Node project: {pkg_dir.relative_to(self.repo_path)}")
 
             # 1️⃣ Install dependencies
             if not self._run_cmd("pnpm install", cwd=pkg_dir):

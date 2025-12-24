@@ -16,6 +16,7 @@ from mcp_servers.tools.analyzer_repo import get_tool as analysis_repo, handle as
 from mcp_servers.tools.sbom import get_tool as sbom_generate, handle as sbom_generate_handler
 from mcp_servers.tools.extract_components import get_tool as extract_components, handle as extract_components_handler
 from mcp_servers.tools.framework import get_tool as framework_tool, handle as framework_handler
+from mcp_servers.tools.tree import get_tool as tree_tool, handle as tree_handler
 
 async def serve():
     server = Server("context-graph-mcp")
@@ -27,6 +28,7 @@ async def serve():
         "generate_sbom": sbom_generate_handler,
         "extract_sbom_components": extract_components_handler,
         "search_frameworks": framework_handler,
+        "generate_dependency_tree": tree_handler,
     }
 
     # List tools
@@ -38,6 +40,7 @@ async def serve():
             sbom_generate(),
             extract_components(),
             framework_tool(),
+            tree_tool(),
         ]
 
     # Call tools

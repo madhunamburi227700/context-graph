@@ -132,7 +132,7 @@ def main():
     python_handler.run()
 
     # call your generated function for nodejs/type_script/javascript
-    node_handler = NodeDependencyHandler(repo_root=repo_path,output_root=orchestration_root,report_file=report_file)
+    node_handler = NodeDependencyHandler(repo_path=repo_path,output_root=orchestration_root,report_file=report_file)
     node_handler.run()
 
 if __name__ == "__main__":
