@@ -6,7 +6,6 @@ from pathlib import Path
 # Utility to write to report
 # -----------------------------
 def write_output(text, report_file):
-    print(text)
     with open(report_file, "a", encoding="utf-8") as f:
         f.write(text + "\n")
 
@@ -95,11 +94,11 @@ class DependencyManager:
 # -----------------------------
 # Single python Framework Orchestrator
 # -----------------------------
-def orchestrate_python_framework_search(repo_path, sbom_output_file, report_file):
+def orchestrate_python_framework_search(repo_path, output_file, report_file):
     write_output("\n-----Section 4: Framework Search (frame.txt)-----", report_file)
 
     # Load frameworks from SBOM output.txt
-    frameworks = load_frameworks_from_output(sbom_output_file)
+    frameworks = load_frameworks_from_output(output_file)
     if not frameworks:
         write_output("❌ No frameworks found in output.txt", report_file)
         return
@@ -107,7 +106,7 @@ def orchestrate_python_framework_search(repo_path, sbom_output_file, report_file
     write_output(f"🔍 Searching {len(frameworks)} frameworks in repository...", report_file)
 
     searcher = DependencyManager(repo_path)
-    frame_file = Path(sbom_output_file).parent / "frame.txt"
+    frame_file = Path(output_file).parent / "frame.txt"
 
     total_matches = searcher.search_all_frameworks(frameworks, output_file=str(frame_file))
 

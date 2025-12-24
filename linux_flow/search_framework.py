@@ -5,7 +5,6 @@ from pathlib import Path
 # Utility to write to report
 # -----------------------------
 def write_output(text, report_file):
-    print(text)
     with open(report_file, "a", encoding="utf-8") as f:
         f.write(text + "\n")
 

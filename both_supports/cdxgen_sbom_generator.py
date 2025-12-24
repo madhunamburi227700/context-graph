@@ -3,6 +3,11 @@ from pathlib import Path
 import shutil
 import os
 import platform
+import sys
+
+
+def log(msg: str):
+    print(msg, file=sys.stderr)
 
 
 # -------------------- Ensure cdxgen is installed --------------------
@@ -11,7 +16,7 @@ def ensure_cdxgen():
     if shutil.which("cdxgen") or shutil.which("cdxgen.cmd"):
         return
 
-    print("❌ cdxgen not found. Installing globally via npm...")
+    log("❌ cdxgen not found. Installing globally via npm...")
     subprocess.run(["npm", "install", "-g", "@cyclonedx/cdxgen"], check=True)
 
     npm_bin = subprocess.check_output(["npm", "bin", "-g"], text=True).strip()
@@ -29,50 +34,45 @@ def ensure_cdxgen():
 
 # -------------------- Generate SBOM --------------------
 def generate_sbom(repo_path: Path) -> Path:
-    """
-    Generate SBOM using cdxgen.
-    Returns path to sbom.json.
-    """
     ensure_cdxgen()
 
     sbom_file = repo_path / "sbom.json"
-
-    print(f"\n📦 Generating SBOM in: {repo_path}")
+    log(f"📦 Generating SBOM in: {repo_path}")
 
     cmd = ["cdxgen", "-r", "--json-pretty", "-o", str(sbom_file)]
     use_shell = platform.system() == "Windows"
 
     try:
-        subprocess.run(cmd, cwd=str(repo_path), check=True, shell=use_shell)
+        subprocess.run(
+            cmd,
+            cwd=str(repo_path),
+            check=True,
+            shell=use_shell,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
     except FileNotFoundError:
-        print("⚠️ cdxgen not found, trying npx...")
         subprocess.run(
             ["npx", "cdxgen", "-r", "--json-pretty", "-o", str(sbom_file)],
             cwd=str(repo_path),
-            check=True
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
         )
 
-    print(f"✅ SBOM generated at: {sbom_file}")
+    log(f"✅ SBOM generated at: {sbom_file}")
     return sbom_file
-
 
 # -------------------- SIMPLE ORCHESTRATION --------------------
 def run_sbom_flow(repo_path) -> Path:
-    """
-    One-flow orchestration:
-    - If sbom.json exists → skip
-    - Else → generate SBOM
-    """
-    # Ensure repo_path is a Path object
     repo_path = Path(repo_path)
 
     sbom_file = repo_path / "sbom.json"
 
     if sbom_file.exists():
-        print(f"\n🔎 sbom.json already exists at: {sbom_file}")
-        print("⏩ Skipping SBOM generation.")
+        log(f"🔎 sbom.json already exists at: {sbom_file}")
+        log("⏩ Skipping SBOM generation.")
         return sbom_file
 
-    print("\n📦 sbom.json not found — generating SBOM...")
+    log("📦 sbom.json not found — generating SBOM...")
     return generate_sbom(repo_path)
-

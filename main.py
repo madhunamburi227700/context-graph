@@ -51,7 +51,7 @@ def main():
     print(f"\n➡ Repo cloned at: {repo_path}")
 
     # Step 3: Detect OS type
-    os_type = run_os_detection(report_file)
+    os_type = run_os_detection()
 
 
 # --------------------------------------------------
@@ -107,7 +107,7 @@ def main():
             sbom_output_file = orchestration_root / "output.txt"
 
             # 4️⃣ Run Python framework search
-            orchestrate_python_framework_search(repo_path=repo_path,sbom_output_file=sbom_output_file,report_file=report_file)
+            orchestrate_python_framework_search(repo_path=repo_path,output_file=sbom_output_file,report_file=report_file)
 
         else:
             print("❌ sbom.json not found in current directory or subfolders.", report_file)
