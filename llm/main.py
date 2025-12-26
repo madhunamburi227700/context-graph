@@ -5,11 +5,18 @@ from pathlib import Path
 from typing import Any
 import os
 
+import sys
+from pathlib import Path
+
+ROOT_DIR = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT_DIR))
+
 import httpx
 from dotenv import load_dotenv
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.types import Tool, CallToolResult, TextContent
+from llm.base import BaseLLM
 
 # ----------------------
 # Logging setup
@@ -23,13 +30,6 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 class Configuration:
     def __init__(self) -> None:
         load_dotenv()
-        self.api_key = os.getenv("OPENAI_API_KEY")
-
-    @property
-    def openai_api_key(self) -> str:
-        if not self.api_key:
-            raise ValueError("OPENAI_API_KEY not found in .env file")
-        return self.api_key
 
     def load_config(self, file_path: str) -> dict[str, Any]:
         with open(file_path, "r") as f:
@@ -89,36 +89,10 @@ class MCPServer:
 
 
 # ----------------------
-# OpenAI Client
-# ----------------------
-class LLMClient:
-    def __init__(self, api_key: str) -> None:
-        self.api_key = api_key
-
-    def get_response(self, messages: list[dict[str, str]]) -> str:
-        url = "https://api.openai.com/v1/chat/completions"
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json",
-        }
-        payload = {
-            "model": "gpt-4o",
-            "messages": messages,
-            "temperature": 0.7,
-            "max_tokens": 1024,
-        }
-
-        with httpx.Client(timeout=30.0) as client:
-            response = client.post(url, headers=headers, json=payload)
-            response.raise_for_status()
-            return response.json()["choices"][0]["message"]["content"]
-
-
-# ----------------------
 # Chat Session (ORCHESTRATOR)
 # ----------------------
 class ChatSession:
-    def __init__(self, servers: list[MCPServer], llm: LLMClient) -> None:
+    def __init__(self, servers: list[MCPServer], llm: BaseLLM) -> None:
         self.servers = servers
         self.llm = llm
 
@@ -233,7 +207,9 @@ async def main():
 
     servers = [MCPServer(name, conf) for name, conf in servers_config["mcpServers"].items()]
 
-    llm = LLMClient(config.openai_api_key)
+    llm_cfg = config.load_config("llm/config.json")
+    from llm.factory import get_llm
+    llm = get_llm(llm_cfg)
     chat = ChatSession(servers, llm)
     await chat.start()
 
