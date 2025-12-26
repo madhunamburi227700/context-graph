@@ -40,7 +40,7 @@ class PythonDependencyHandler:
             # print(f"\n=== Step 2: Creating venv '{env_name}' with uv ===")
             subprocess.run(["uv", "venv", venv_path], check=True)
         else:
-            # print(f"\n✔ Virtual environment already exists at: {venv_path}")
+            print(f"\n✔ Virtual environment already exists at: {venv_path}")
 
         system = platform.system()
         python_exec = os.path.join(
@@ -57,7 +57,7 @@ class PythonDependencyHandler:
             shutil.rmtree(venv_path, ignore_errors=True)
             # print("✔ Virtual environment removed successfully.")
         else:
-            # print(f"\n⚠️ Virtual environment not found at: {venv_path}")
+            print(f"\n⚠️ Virtual environment not found at: {venv_path}")
 
     # ---------------- Dependency Installation ----------------
     def _install_dependencies(self, env_name, repo_path, dep_file, all_dep_output, dets_output):
@@ -98,13 +98,13 @@ class PythonDependencyHandler:
                 check=True
             )
         elif dep_file.endswith("requirements.txt"):
-            # print(f"\n📄 Processing requirements.txt: {dep_file}")
+            print(f"\n📄 Processing requirements.txt: {dep_file}")
             subprocess.run(
                 ["uv", "pip", "compile", dep_path, "-o", all_dep_output],
                 check=True
             )
         else:
-            # print(f"⚠️ Unsupported dependency file: {dep_file}")
+            print(f"⚠️ Unsupported dependency file: {dep_file}")
             return
 
         # Generate dets.json
@@ -120,18 +120,18 @@ class PythonDependencyHandler:
     # ---------------- JSON Conversion ----------------
     def _load_dependencies_from_json(self, file_path):
         if not os.path.exists(file_path):
-            # print(f"❌ Error: File '{file_path}' not found.")
+            print(f"❌ Error: File '{file_path}' not found.")
             return {}
         try:
             with open(file_path, "r", encoding="utf-8") as f:
                 return json.load(f)
         except json.JSONDecodeError:
-            # print(f"❌ Invalid JSON in '{file_path}'")
+            print(f"❌ Invalid JSON in '{file_path}'")
             return {}
 
     def _convert_json(self, json_input, json_output):
         if not os.path.exists(json_input):
-            # print(f"⚠️ Input file '{json_input}' not found. Skipping normalization.")
+            print(f"⚠️ Input file '{json_input}' not found. Skipping normalization.")
             return {}
 
         raw = self._load_dependencies_from_json(json_input)
@@ -152,7 +152,7 @@ class PythonDependencyHandler:
         with open(json_output, "w", encoding="utf-8") as f:
             json.dump({"dependencies": normalized}, f, indent=2)
 
-        # print(f"✅ Normalized dependencies saved to {json_output}")
+        print(f"✅ Normalized dependencies saved to {json_output}")
         return normalized
 
 # Only changes in the `run()` method and _convert_json logic
@@ -167,19 +167,19 @@ class PythonDependencyHandler:
         found_files = sorted([p.relative_to(self.repo_path) for p in self.repo_path.rglob("*") if p.name in valid_files], key=str)
 
         if not found_files:
-            # print("⏭️ No Python dependency files found — skipping Python analysis.")
+            print("⏭️ No Python dependency files found — skipping Python analysis.")
             self._write_report("⏭️ No Python dependency files found — skipping Python dependency tree generation.")
             return False
 
-        # print("✅ Found Python dependency files:")
+        print("✅ Found Python dependency files:")
         for f in found_files:
-            # print(f"   - {f}")
+            print(f"   - {f}")
 
         combined_output = {"python_dependencies": []}
         file_count = 1
 
         for selected_file in found_files:
-            # print(f"\n📦 Processing Python dependency file: {selected_file}")
+            print(f"\n📦 Processing Python dependency file: {selected_file}")
             project_dir = (self.repo_path / selected_file).parent
             all_dep_file = self.output_root / f"python_all-dep_{file_count}.txt"
             dets_file = self.output_root / f"python_dets_{file_count}.json"
@@ -203,14 +203,14 @@ class PythonDependencyHandler:
                         "data": normalized_data
                     })
 
-                    # print(f"✅ Normalization file generated → {temp_normalized}")
+                    print(f"✅ Normalization file generated → {temp_normalized}")
                     # Do NOT delete temp_normalized; keep it for inspection
 
                 else:
-                    # print(f"⚠️ No dependency JSON for {selected_file}")
+                    print(f"⚠️ No dependency JSON for {selected_file}")
 
             except Exception as e:
-                # print(f"❌ Failed processing {selected_file}: {e}")
+                print(f"❌ Failed processing {selected_file}: {e}")
 
             finally:
                 if 'venv_path' in locals():
@@ -222,7 +222,7 @@ class PythonDependencyHandler:
         with open(final_output_file, "w", encoding="utf-8") as f:
             json.dump(combined_output, f, indent=2)
 
-        # print(f"\n📄 Combined Python dependencies saved → {final_output_file}")
+        print(f"\n📄 Combined Python dependencies saved → {final_output_file}")
 
         # Append to report
         if final_output_file.exists() and final_output_file.stat().st_size > 0:
@@ -233,5 +233,5 @@ class PythonDependencyHandler:
         else:
             self._write_report(f"⚠️ {final_output_file.name} is empty — no dependencies captured.")
 
-        # print("🎉 Finished processing Python dependency files.")
+        print("🎉 Finished processing Python dependency files.")
         return True
