@@ -43,6 +43,8 @@ The tools can be used in the following **sequence** to emulate full orchestratio
 ---
 
 ## Project Structure
+
+```text
 .
 ├── .env
 ├── images/
@@ -79,6 +81,7 @@ The tools can be used in the following **sequence** to emulate full orchestratio
 ├── MCP_README.md
 ├── pyproject.toml
 └── README.md
+```
 
 ----
 
@@ -140,22 +143,22 @@ python llm/main.py
 Once the orchestration server is initialized, you can call a specific MCP tool interactively. For example:
 
 You: clone_repo https://github.com/example/project.git
-# Output: Confirmation that the repo was cloned, and the absolute repo path
+### Output: Confirmation that the repo was cloned, and the absolute repo path
 
 You: analyze_repo
-# Output: Analysis report generated, including repo path, orchestration root, and OS type
+### Output: Analysis report generated, including repo path, orchestration root, and OS type
 
 You: generate_sbom
-# Output: SBOM generated for the repository
+### Output: SBOM generated for the repository
 
 You: extract_sbom_components
-# Output: SBOM components report generated
+### Output: SBOM components report generated
 
 You: search_frameworks
-# Output: Framework usage report generated
+### Output: Framework usage report generated
 
 You: generate_dependency_tree
-# Output: Dependency tree report generated
+### Output: Dependency tree report generated
 
 
 ## Architecture Diagram
