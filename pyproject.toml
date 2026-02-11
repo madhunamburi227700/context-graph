@@ -2,7 +2,7 @@
 name = "context_graph_utility"
 version = "0.1.0"
 description = "MCP chatbot with OpenAI + context analyze"
-readme = "README.md"
+#readme = "README.md"
 requires-python = ">=3.10"
 authors = [{ name = "Madhu" }]
 license = { text = "MIT" }

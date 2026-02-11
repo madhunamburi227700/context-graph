@@ -57,7 +57,7 @@ def main():
 # --------------------------------------------------
     # linux flow
 # --------------------------------------------------
-    if os_type =="windows":
+    if os_type =="linux":
 
         # step 2: repo analysis in linux
         analyzer = RepoAnalyzer(repo_path=repo_path,report_file=report_file)

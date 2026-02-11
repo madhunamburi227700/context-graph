@@ -19,6 +19,7 @@ RUN apt-get update && apt-get install -y \
     unzip \
     grep \
     ripgrep \
+    maven \
     && rm -rf /var/lib/apt/lists/*
 
 # -------------------- OPENJDK 19 SETUP --------------------
@@ -33,21 +34,6 @@ ENV JAVA_HOME=/usr/lib/jvm/java-19-openjdk-amd64
 ENV PATH="$JAVA_HOME/bin:$PATH"
 
 RUN java -version
-
-# -------------------- MAVEN 3.9.11 SETUP --------------------
-ENV MAVEN_VERSION=3.9.11
-
-RUN curl -fSL "https://downloads.apache.org/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.zip" -o /tmp/maven.zip \
-    && unzip /tmp/maven.zip -d /usr/local/ \
-    && rm /tmp/maven.zip \
-    && mv /usr/local/apache-maven-${MAVEN_VERSION} /usr/local/apache-maven \
-    && chmod +x /usr/local/apache-maven/bin/mvn
-
-ENV MAVEN_HOME=/usr/local/apache-maven
-ENV PATH="$MAVEN_HOME/bin:$PATH"
-
-RUN mvn -v
-
 
 # -------------------- NODE.JS + NPM + CDXGEN --------------------
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
@@ -87,6 +73,13 @@ RUN mkdir -p $GOPATH/bin \
 # -------------------- WORKSPACE --------------------
 WORKDIR /workspace
 
-COPY . /workspace
+# Copy dependency files first for caching
+COPY pyproject.toml uv.lock ./
+RUN uv sync --no-install-project
 
-CMD ["/bin/bash"]
+# Copy application code
+COPY . /workspace
+RUN uv sync
+
+# Command to run the application
+CMD ["python3", "main.py"]
